@@ -3,3 +3,4 @@ gtts
 moviepy
 Pillow
 colorthief
+imageio-ffmpeg
