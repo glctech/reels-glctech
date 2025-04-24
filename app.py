@@ -2,7 +2,7 @@
 import os
 import random
 from gtts import gTTS
-from moviepy.editor import *
+#from moviepy.editor import *
 from PIL import Image
 import streamlit as st
 from colorthief import ColorThief
