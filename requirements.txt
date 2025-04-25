@@ -1,6 +1,5 @@
 streamlit
-gtts
 moviepy
-Pillow
+gtts
+pillow
 colorthief
-imageio-ffmpeg
