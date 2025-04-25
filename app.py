@@ -1,10 +1,8 @@
 import os
 import random
-from gtts import gTTS
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 from colorthief import ColorThief
-from io import BytesIO
 
 st.set_page_config(page_title="Gerador de Post para Instagram - GLCTech", layout="centered")
 st.title("🎨 Gerador de Post para Instagram - GLCTech")
@@ -38,10 +36,11 @@ def renderizar_texto_na_imagem(imagem_fundo, texto, cor_texto, texto_fonte="Aria
 
     return img
 
-# Função para ajustar o logotipo proporcionalmente
-def ajustar_logotipo_proporcional(logo, tamanho_maximo=150):
+# Função para ajustar o logotipo proporcionalmente e aumentar 25%
+def ajustar_logotipo_proporcional(logo, tamanho_maximo=150, aumento=1.25):
     largura, altura = logo.size
-    fator_escala = min(tamanho_maximo / largura, tamanho_maximo / altura)
+    # Aumentar o logotipo em 25%
+    fator_escala = min(tamanho_maximo / largura, tamanho_maximo / altura) * aumento
     nova_largura = int(largura * fator_escala)
     nova_altura = int(altura * fator_escala)
     return logo.resize((nova_largura, nova_altura), Image.Resampling.LANCZOS)
@@ -51,7 +50,6 @@ def main():
     # Uploads e entradas
     logo_file = st.file_uploader("Upload da logo (PNG)", type=["png"])
     bg_image_file = st.file_uploader("Upload da imagem de fundo", type=["png", "jpg", "jpeg", "gif"])
-    music_file = st.file_uploader("Upload da música de fundo (MP3)", type=["mp3"])
     dica_texto = st.text_area("Digite a dica de Zabbix")
     slogan_texto = st.text_input("Slogan da empresa (opcional)", "GLCTech - Monitoramento profissional com Zabbix")
 
@@ -64,7 +62,6 @@ def main():
         os.makedirs("posts", exist_ok=True)
         logo_path = os.path.join("posts", "logo.png")
         bg_image_path = os.path.join("posts", "background.png")
-        audio_path = os.path.join("posts", "audio.mp3")
 
         # Salvar arquivos carregados
         with open(logo_path, "wb") as f:
@@ -98,7 +95,7 @@ def main():
         # Adicionar logo no canto superior esquerdo de forma proporcional
         try:
             logo = Image.open(logo_path)
-            logo_resized = ajustar_logotipo_proporcional(logo, tamanho_maximo=150)
+            logo_resized = ajustar_logotipo_proporcional(logo, tamanho_maximo=150, aumento=1.25)
             texto_img.paste(logo_resized, (30, 30), logo_resized)
         except Exception as e:
             st.error(f"Erro ao adicionar logo à imagem: {e}")
