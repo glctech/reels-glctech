@@ -1,53 +1,27 @@
 import os
 import random
-import textwrap
 from gtts import gTTS
-from moviepy.editor import *
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import streamlit as st
 from colorthief import ColorThief
+from moviepy.editor import *
+from moviepy.video.fx.all import fadein, fadeout
 
 st.set_page_config(page_title="Gerador de Reels GLCTech", layout="centered")
 st.title("🎬 Gerador de Reels para GLCTech")
 
-# Entradas
+# Uploads e entradas
 logo_file = st.file_uploader("Upload da logo (PNG)", type=["png"])
 music_file = st.file_uploader("Upload da música de fundo (MP3)", type=["mp3"])
 dica_texto = st.text_area("Digite a dica de Zabbix")
 slogan_texto = st.text_input("Slogan da empresa (opcional)", "GLCTech - Monitoramento profissional com Zabbix")
+
 gerar = st.button("🎥 Gerar Vídeo")
 
 def cor_contraste(rgb):
     r, g, b = rgb
-    luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    luminancia = (0.299*r + 0.587*g + 0.114*b)/255
     return 'black' if luminancia > 0.6 else 'white'
-
-def quebra_texto(texto, max_caracteres=40):
-    return "\n".join(textwrap.wrap(texto, width=max_caracteres))
-
-def gerar_texto_clip(texto, tamanho_fonte, cor, dimensao, duracao=8):
-    largura, altura = dimensao
-    img = Image.new('RGBA', dimensao, (255, 255, 255, 0))
-    draw = ImageDraw.Draw(img)
-
-    try:
-        fonte = ImageFont.truetype("arial.ttf", tamanho_fonte)
-    except:
-        fonte = ImageFont.load_default()
-
-    linhas = texto.split('\n')
-    altura_texto = sum([draw.textbbox((0, 0), linha, font=fonte)[3] for linha in linhas])
-    y_texto = (altura - altura_texto) // 2
-
-    for linha in linhas:
-        largura_linha = draw.textbbox((0, 0), linha, font=fonte)[2]
-        x_texto = (largura - largura_linha) // 2
-        draw.text((x_texto, y_texto), linha, font=fonte, fill=cor)
-        y_texto += draw.textbbox((0, 0), linha, font=fonte)[3]
-
-    caminho = "reels/temp_texto.png"
-    img.save(caminho)
-    return ImageClip(caminho).set_duration(duracao)
 
 if gerar and logo_file and music_file and dica_texto:
     st.info("Processando vídeo...")
@@ -66,20 +40,23 @@ if gerar and logo_file and music_file and dica_texto:
     dominant_color = color_thief.get_color(quality=1)
     texto_color = cor_contraste(dominant_color)
 
-    # Narração
     tts = gTTS(dica_texto, lang='pt')
     tts.save(audio_path)
 
-    fundo_top = ColorClip(size=(1080, 960), color=dominant_color, duration=10)
-    fundo_bottom = ColorClip(size=(1080, 960), color=tuple(min(255, c + 30) for c in dominant_color), duration=10)
-    fundo = concatenate_videoclips([fundo_top, fundo_bottom], method="compose")
+    fundo = ColorClip(size=(1080, 1920), color=dominant_color, duration=10)
 
-    # Geração do texto da dica e slogan como imagem com PIL
-    texto_quebrado = quebra_texto(dica_texto)
-    texto_clip = gerar_texto_clip(texto_quebrado, 60, texto_color, (1000, 1000), duracao=8).set_position("center").fadein(0.5).fadeout(0.5)
-    slogan_clip = gerar_texto_clip(slogan_texto, 40, texto_color, (1000, 200), duracao=2).set_position(("center", 1700)).fadein(0.5).fadeout(0.5)
+    texto_clip = TextClip(dica_texto, fontsize=60, color=texto_color, font='DejaVu-Sans-Bold', size=(900, None), method='label')
+    texto_clip = texto_clip.set_position(('center', 'center')).set_duration(8)
+    texto_clip = fadein(texto_clip, 0.5)
+    texto_clip = fadeout(texto_clip, 0.5)
 
-    logo = ImageClip(logo_path).set_duration(10).resize(height=150).set_position((30, 30)).fadein(0.5)
+    slogan_clip = TextClip(slogan_texto, fontsize=40, color=texto_color, font='DejaVu-Sans-Bold', size=(1000, None), method='label')
+    slogan_clip = slogan_clip.set_position(('center', 1700)).set_duration(2)
+    slogan_clip = fadein(slogan_clip, 0.5)
+    slogan_clip = fadeout(slogan_clip, 0.5)
+
+    logo = ImageClip(logo_path).set_duration(10).resize(height=150).set_position((30, 30))
+    logo = fadein(logo, 0.5)
 
     musica = AudioFileClip(music_path).volumex(0.2)
     narracao = AudioFileClip(audio_path)
@@ -93,6 +70,5 @@ if gerar and logo_file and music_file and dica_texto:
 
     st.success("Vídeo gerado com sucesso!")
     st.video(output_path)
-
 elif gerar:
     st.warning("Por favor, preencha todos os campos antes de gerar o vídeo.")
