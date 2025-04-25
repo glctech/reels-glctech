@@ -16,7 +16,7 @@ def cor_contraste(rgb):
     return 'black' if luminancia > 0.6 else 'white'
 
 # Função para renderizar o texto na imagem de fundo
-def renderizar_texto_na_imagem(imagem_fundo, texto, cor_texto, cor_fundo, texto_fonte="Arial", tamanho_fonte=60):
+def renderizar_texto_na_imagem(imagem_fundo, texto, cor_texto, texto_fonte="Arial", tamanho_fonte=60):
     img = imagem_fundo.copy()
     draw = ImageDraw.Draw(img)
 
@@ -37,6 +37,14 @@ def renderizar_texto_na_imagem(imagem_fundo, texto, cor_texto, cor_fundo, texto_
     draw.text(posicao_texto, texto, font=fonte, fill=cor_texto)
 
     return img
+
+# Função para ajustar o logotipo proporcionalmente
+def ajustar_logotipo_proporcional(logo, tamanho_maximo=150):
+    largura, altura = logo.size
+    fator_escala = min(tamanho_maximo / largura, tamanho_maximo / altura)
+    nova_largura = int(largura * fator_escala)
+    nova_altura = int(altura * fator_escala)
+    return logo.resize((nova_largura, nova_altura), Image.Resampling.LANCZOS)
 
 # Função principal do app
 def main():
@@ -82,15 +90,15 @@ def main():
 
         # Gerar texto
         try:
-            texto_img = renderizar_texto_na_imagem(bg_img, dica_texto, cor_texto=texto_color, cor_fundo=dominant_color)
+            texto_img = renderizar_texto_na_imagem(bg_img, dica_texto, cor_texto=texto_color)
         except Exception as e:
             st.error(f"Erro ao adicionar texto à imagem: {e}")
             return
 
-        # Adicionar logo no canto superior esquerdo
+        # Adicionar logo no canto superior esquerdo de forma proporcional
         try:
             logo = Image.open(logo_path)
-            logo_resized = logo.resize((150, 150))
+            logo_resized = ajustar_logotipo_proporcional(logo, tamanho_maximo=150)
             texto_img.paste(logo_resized, (30, 30), logo_resized)
         except Exception as e:
             st.error(f"Erro ao adicionar logo à imagem: {e}")
