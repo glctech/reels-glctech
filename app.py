@@ -1,80 +1,96 @@
-# app.py
 import os
 import random
 from gtts import gTTS
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 from colorthief import ColorThief
-import tempfile
+from io import BytesIO
 
-st.set_page_config(page_title="Gerador de Posts GLCTech", layout="centered")
-st.title("🖼️ Gerador de Posts para Instagram - GLCTech")
+st.set_page_config(page_title="Gerador de Post para Instagram - GLCTech", layout="centered")
+st.title("🎨 Gerador de Post para Instagram - GLCTech")
 
 # Uploads e entradas
 logo_file = st.file_uploader("Upload da logo (PNG)", type=["png"])
-background_file = st.file_uploader("Imagem de fundo (JPG, PNG, GIF)", type=["jpg", "jpeg", "png", "gif"])
+bg_image_file = st.file_uploader("Upload da imagem de fundo", type=["png", "jpg", "jpeg", "gif"])
+music_file = st.file_uploader("Upload da música de fundo (MP3)", type=["mp3"])
 dica_texto = st.text_area("Digite a dica de Zabbix")
 slogan_texto = st.text_input("Slogan da empresa (opcional)", "GLCTech - Monitoramento profissional com Zabbix")
 
 gerar = st.button("🖼️ Gerar Post")
 
-# Função auxiliar para cor de contraste
+# Função auxiliar para calcular cor de contraste
 def cor_contraste(rgb):
     r, g, b = rgb
-    luminancia = (0.299*r + 0.587*g + 0.114*b)/255
+    luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     return 'black' if luminancia > 0.6 else 'white'
 
-# Função para criar imagem com texto sobre a imagem de fundo
-def criar_post(fundo_path, logo_path, dica, slogan, output_path):
-    imagem_fundo = Image.open(fundo_path).convert("RGB")
-    imagem_fundo = imagem_fundo.resize((1080, 1080))  # tamanho padrão Instagram
+# Função para adicionar o texto na imagem de fundo
+def renderizar_texto_na_imagem(imagem_fundo, texto, cor_texto, cor_fundo, texto_fonte="Arial", tamanho_fonte=60):
+    img = imagem_fundo.copy()
+    draw = ImageDraw.Draw(img)
 
-    draw = ImageDraw.Draw(imagem_fundo)
-
-    color_thief = ColorThief(fundo_path)
-    cor_dominante = color_thief.get_color(quality=1)
-    cor_texto = cor_contraste(cor_dominante)
-
+    # Escolher uma fonte
     try:
-        fonte_dica = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
-        fonte_slogan = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
-    except:
-        fonte_dica = ImageFont.load_default()
-        fonte_slogan = ImageFont.load_default()
+        fonte = ImageFont.truetype("Arial-Bold.ttf", tamanho_fonte)
+    except IOError:
+        fonte = ImageFont.load_default()
+    
+    largura_texto, altura_texto = draw.textsize(texto, font=fonte)
+    
+    # Ajustar o texto para centralizar
+    posicao_texto = ((img.width - largura_texto) // 2, (img.height - altura_texto) // 2)
+    
+    # Adicionar sombra ao texto
+    draw.text((posicao_texto[0] + 2, posicao_texto[1] + 2), texto, font=fonte, fill='black')
+    draw.text(posicao_texto, texto, font=fonte, fill=cor_texto)
 
-    # Caixa de texto centralizada
-    margem = 60
-    caixa_largura = 960
-    x_texto = (imagem_fundo.width - caixa_largura) // 2
-    y_texto = 300
+    return img
 
-    draw.text((x_texto, y_texto), dica, font=fonte_dica, fill=cor_texto)
-    draw.text((x_texto, 900), slogan, font=fonte_slogan, fill=cor_texto)
+if gerar and logo_file and bg_image_file and dica_texto:
+    st.info("Processando post...")
 
-    # Adiciona logo
-    logo_img = Image.open(logo_path).convert("RGBA")
-    logo_img = logo_img.resize((180, 180))
-    imagem_fundo.paste(logo_img, (30, 30), logo_img)
+    # Criar pastas e salvar arquivos temporários
+    os.makedirs("posts", exist_ok=True)
+    logo_path = os.path.join("posts", "logo.png")
+    bg_image_path = os.path.join("posts", "background.png")
+    audio_path = os.path.join("posts", "audio.mp3")
 
-    imagem_fundo.save(output_path)
+    # Salvar arquivos carregados
+    with open(logo_path, "wb") as f:
+        f.write(logo_file.read())
+    
+    with open(bg_image_path, "wb") as f:
+        f.write(bg_image_file.read())
 
-if gerar and logo_file and background_file and dica_texto:
-    st.info("Gerando post...")
+    # Carregar a imagem de fundo
+    bg_img = Image.open(bg_image_path)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_logo:
-        tmp_logo.write(logo_file.read())
-        logo_path = tmp_logo.name
+    # Ajustar a imagem de fundo para as dimensões do post do Instagram (1080x1080)
+    bg_img = bg_img.resize((1080, 1080), Image.ANTIALIAS)
+    
+    # Extrair cor dominante da imagem de fundo
+    color_thief = ColorThief(bg_image_path)
+    dominant_color = color_thief.get_color(quality=1)
+    texto_color = cor_contraste(dominant_color)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_fundo:
-        tmp_fundo.write(background_file.read())
-        fundo_path = tmp_fundo.name
+    # Gerar texto
+    texto_img = renderizar_texto_na_imagem(bg_img, dica_texto, cor_texto=texto_color, cor_fundo=dominant_color)
 
-    output_path = os.path.join("post_final.png")
+    # Adicionar logo no canto superior esquerdo
+    logo = Image.open(logo_path)
+    logo_resized = logo.resize((150, 150))
+    texto_img.paste(logo_resized, (30, 30), logo_resized)
 
-    criar_post(fundo_path, logo_path, dica_texto, slogan_texto, output_path)
+    # Salvar a imagem gerada como post
+    output_image_path = os.path.join("posts", f"post_{random.randint(100,999)}.png")
+    texto_img.save(output_image_path)
 
     st.success("Post gerado com sucesso!")
-    st.image(output_path, use_column_width=True)
+    st.image(output_image_path, caption="Post para Instagram")
+
+    # Oferecer o download do post
+    with open(output_image_path, "rb") as f:
+        st.download_button("Baixar Post", f, file_name=os.path.basename(output_image_path))
 
 elif gerar:
     st.warning("Por favor, preencha todos os campos antes de gerar o post.")
