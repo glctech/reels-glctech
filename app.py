@@ -66,7 +66,7 @@ if gerar and logo_file and bg_image_file and dica_texto:
     bg_img = Image.open(bg_image_path)
 
     # Ajustar a imagem de fundo para as dimensões do post do Instagram (1080x1080)
-    bg_img = bg_img.resize((1080, 1080), Image.ANTIALIAS)
+    bg_img = bg_img.resize((1080, 1080), Image.Resampling.LANCZOS)
     
     # Extrair cor dominante da imagem de fundo
     color_thief = ColorThief(bg_image_path)
