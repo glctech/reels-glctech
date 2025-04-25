@@ -3,6 +3,7 @@ import os
 import random
 from gtts import gTTS
 #from moviepy.editor import *
+from moviepy.editor import ColorClip, TextClip, ImageClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, concatenate_videoclips
 from PIL import Image
 import streamlit as st
 from colorthief import ColorThief
